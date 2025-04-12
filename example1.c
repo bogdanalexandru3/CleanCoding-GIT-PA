@@ -1,155 +1,164 @@
+/* Determinati daca exista sau nu drum direct intre doua restaurante dintr-o retea de tip graf */
+
 #include <stdlib.h>
 #include <stdio.h>
 
 typedef struct Node {
     int data;
     struct Node *next;
-} Node;
+}
+/// pentru simplitate, folosim int-uri pt a numi restaurantele/locatiile
+/// ex: 1 - restaurantul 1 si tot asa
+NODE;
 
-typedef struct Graph {
-    int vertices;
-    int *visited;
-    Node **adjList;
-} Graph;
+typedef struct g {
+    int v;
+    int *vis;
+    struct Node **alst;
+}
+GPH;
 
-typedef struct Stack {
-    int top;
-    int capacity;
-    int *array;
-} Stack;
+typedef struct s {
+    int t;
+    int scap;
+    int *arr;
+} STK;
 
-Node *create_node(int value) {
-    Node *newNode = malloc(sizeof(Node));
-    newNode->data = value;
-    newNode->next = NULL;
-    return newNode;
+NODE *create_node(int v) {
+    NODE *nn = malloc(sizeof(NODE));
+    nn->data = v;
+    nn->next = NULL;
+    return nn;
 }
 
-Graph *create_graph(int vertices) {
-    Graph *graph = malloc(sizeof(Graph));
-    graph->vertices = vertices;
-    graph->adjList = malloc(vertices * sizeof(Node *));
-    graph->visited = calloc(vertices, sizeof(int));
+void add_edge(GPH *g, int src, int dest) {
+    NODE *nn = create_node(dest);
+    nn->next = g->alst[src];
+    g->alst[src] = nn;
 
-    for (int i = 0; i < vertices; i++) {
-        graph->adjList[i] = NULL;
-        graph->visited[i] = 0;
+    nn = create_node(src);
+    nn->next = g->alst[dest];
+    g->alst[dest] = nn;
+}
+
+GPH *create_g(int v) {
+    GPH *g = malloc(sizeof(GPH));
+    g->v = v;
+    g->alst = malloc(v * sizeof(NODE *));
+    g->vis = malloc(sizeof(int) * v);
+
+    for (int i = 0; i < v; i++) {
+        g->alst[i] = NULL;
+        g->vis[i] = 0;
     }
-
-    return graph;
+    return g;
 }
 
-void add_edge(Graph *graph, int src, int dest) {
-    Node *newNode = create_node(dest);
-    newNode->next = graph->adjList[src];
-    graph->adjList[src] = newNode;
+STK *create_s(int scap) {
+    STK *s = malloc(sizeof(STK));
+    s->arr = malloc(scap * sizeof(int));
+    s->t = -1;
+    s->scap = scap;
 
-    newNode = create_node(src);
-    newNode->next = graph->adjList[dest];
-    graph->adjList[dest] = newNode;
+    return s;
 }
 
-Stack *create_stack(int capacity) {
-    Stack *stack = malloc(sizeof(Stack));
-    stack->array = malloc(capacity * sizeof(int));
-    stack->top = -1;
-    stack->capacity = capacity;
-    return stack;
+void push(int pshd, STK *s) {
+    s->t = s->t + 1;
+    s->arr[s->t] = pshd;
 }
 
-void push(Stack *stack, int value) {
-    if (stack->top < stack->capacity - 1) {
-        stack->array[++stack->top] = value;
-    }
-}
+void DFS(GPH *g, STK *s, int v_nr) {
+    NODE *adj_list = g->alst[v_nr];
+    NODE *aux = adj_list;
 
-void DFS(Graph *graph, Stack *stack, int vertex) {
-    graph->visited[vertex] = 1;
-    push(stack, vertex);
+    g->vis[v_nr] = 1;
+    printf("%d ", v_nr);
+    push(v_nr, s);
 
-    Node *temp = graph->adjList[vertex];
-
-    while (temp != NULL) {
-        int connectedVertex = temp->data;
-        if (!graph->visited[connectedVertex]) {
-            DFS(graph, stack, connectedVertex);
+    while (aux != NULL) {
+        int con_ver = aux->data;
+        if (g->vis[con_ver] == 0) {
+            DFS(g, s, con_ver);
         }
-        temp = temp->next;
+        aux = aux->next;
     }
 }
 
-void reset_visited(Graph *graph) {
-    for (int i = 0; i < graph->vertices; i++) {
-        graph->visited[i] = 0;
-    }
-}
-
-void insert_edges(Graph *graph, int edgeCount) {
+void insert_edges(GPH *g, int edg_nr, int nrv) {
     int src, dest;
-    for (int i = 0; i < edgeCount; i++) {
+    printf("adauga %d muchii (de la 0 la %d)\n", edg_nr, nrv - 1);
+    for (int i = 0; i < edg_nr; i++) {
         scanf("%d %d", &src, &dest);
-        if (src >= 0 && src < graph->vertices && dest >= 0 && dest < graph->vertices) {
-            add_edge(graph, src, dest);
-        }
+        add_edge(g, src, dest);
     }
 }
 
-int is_reachable(Graph *graph, int src, int dest) {
-    Stack *stack = create_stack(graph->vertices);
-    DFS(graph, stack, src);
-
-    int reachable = 0;
-    for (int i = 0; i <= stack->top; i++) {
-        if (stack->array[i] == dest) {
-            reachable = 1;
-            break;
-        }
+void wipe(GPH *g, int nrv) {
+    for (int i = 0; i < nrv; i++) {
+        g->vis[i] = 0;
     }
-
-    free(stack->array);
-    free(stack);
-    reset_visited(graph);
-
-    return reachable;
 }
 
-void free_graph(Graph *graph) {
-    for (int i = 0; i < graph->vertices; i++) {
-        Node *temp = graph->adjList[i];
-        while (temp) {
-            Node *next = temp->next;
+int check_direct_connection(GPH *g, int src, int dest) {
+    NODE *aux = g->alst[src];
+    while (aux != NULL) {
+        if (aux->data == dest) {
+            return 1;
+        }
+        aux = aux->next;
+    }
+    return 0;
+}
+
+int main() {
+
+    int nrv;
+    int edg_nr;
+    int src, dest;
+    int i;
+    int vortex_1;
+    int virtex_2;
+    int ans;
+
+    printf("cate noduri are graful?");
+    scanf("%d", &nrv);
+
+    printf("cate muchii are graful?");
+    scanf("%d", &edg_nr);
+
+    GPH *g = create_g(nrv);
+    STK *s1 = create_s(2 * nrv);
+    STK *s2 = create_s(2 * nrv);
+
+    insert_edges(g, edg_nr, nrv);
+
+    printf("introduceti cele doua noduri pentru verificare: ");
+    scanf("%d %d", &vortex_1, &virtex_2);
+
+    ans = check_direct_connection(g, vortex_1, virtex_2);
+
+    if (ans) {
+        printf("Exista drum direct intre %d si %d.\n", vortex_1, virtex_2);
+    } else {
+        printf("Nu exista drum direct intre %d si %d.\n", vortex_1, virtex_2);
+    }
+
+    for (int i = 0; i < nrv; i++) {
+        NODE *temp = g->alst[i];
+        while (temp != NULL) {
+            NODE *next = temp->next;
             free(temp);
             temp = next;
         }
     }
-    free(graph->adjList);
-    free(graph->visited);
-    free(graph);
-}
-
-int main() {
-    int vertices, edges;
-    int src, dest;
-
-    scanf("%d", &vertices);
-    scanf("%d", &edges);
-
-    Graph *graph = create_graph(vertices);
-    insert_edges(graph, edges);
-
-    scanf("%d %d", &src, &dest);
-
-    if (src >= 0 && src < vertices && dest >= 0 && dest < vertices) {
-        if (is_reachable(graph, src, dest)) {
-            printf("DA\n");
-        } else {
-            printf("NU\n");
-        }
-    } else {
-        printf("NU\n");
-    }
-
-    free_graph(graph);
+    free(g->alst);
+    free(g->vis);
+    free(g);
+    free(s1->arr);
+    free(s1);
+    free(s2->arr);
+    free(s2);
 
     return 0;
 }

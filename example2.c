@@ -201,6 +201,5 @@ int main() {
     printf("NULL\n");
 
     free_graph(graph);
-
     return 0;
 }
